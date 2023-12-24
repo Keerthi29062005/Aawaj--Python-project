@@ -7,7 +7,6 @@ from pydub import AudioSegment
 from docx import Document
 import subprocess
 import moviepy.editor
-import webbrowser
 import shutil
 import os
 import threading 
@@ -61,24 +60,27 @@ def play_mp3_with_media_player(mp3_path):
         messagebox.showerror("Error", "Failed to open MP3 with Windows Media Player:\n" + str(e))
 
 # Function to convert WAV to text
-def convert_wav_to_text():
-    audio_file = filedialog.askopenfilename(filetypes=[("Audio files", "*.wav")])
+
+# Function to convert audio to text
+def convert_mp3_to_text():
+    audio_file = filedialog.askopenfilename(filetypes=[("Audio files", "*.mp3")])
     if audio_file:
-        def convert_audio_to_text():
+        wav_audio = convert_mp3_to_wav(audio_file)
+
+        def recognize_audio():
             try:
                 r = sr.Recognizer()
-                with sr.AudioFile(audio_file) as source:
+                with sr.AudioFile(wav_audio) as source:
                     r.adjust_for_ambient_noise(source)
                     audio = r.listen(source)
                     recognized_text = r.recognize_google(audio)
-                    
-                    # Create a temporary file
+
                     temp_docx_file = NamedTemporaryFile(suffix=".docx", delete=False)
-                    
+
                     save_text_as_word_document(recognized_text, temp_docx_file.name)
-                    
-                    progress_bar_audio.stop()
-                    progress_bar_audio["value"] = 100
+
+                    progress_bar_audio_mp3.stop()
+                    progress_bar_audio_mp3["value"] = 100
                     open_choice = messagebox.askyesno("Open Word Document", "Do you want to open the Word document?")
                     if open_choice:
                         open_word_document(temp_docx_file.name)
@@ -86,16 +88,23 @@ def convert_wav_to_text():
                         if like_choice:
                             save_docx_locally(temp_docx_file.name)
             except Exception as e:
-                progress_bar_audio.stop()
-                progress_bar_audio["value"] = 100
+                progress_bar_audio_mp3.stop()
+                progress_bar_audio_mp3["value"] = 100
                 status_label.config(text="Conversion failed.")
                 messagebox.showerror("Error", "Failed to convert audio to text:\n" + str(e))
 
-        progress_bar_audio["value"] = 0
-        progress_bar_audio.start()
-        
-        t = threading.Thread(target=convert_audio_to_text)
+        progress_bar_audio_mp3["value"] = 0
+        progress_bar_audio_mp3.start()
+
+        t = threading.Thread(target=recognize_audio)
         t.start()
+
+# Function to convert MP3 to WAV using pydub
+def convert_mp3_to_wav(mp3_path):
+    audio = AudioSegment.from_mp3(mp3_path)
+    wav_audio = NamedTemporaryFile(suffix=".wav", delete=False).name
+    audio.export(wav_audio, format="wav")
+    return wav_audio
 
 # Function to save Word document locally
 def save_docx_locally(docx_path):
@@ -117,11 +126,7 @@ def open_word_document(docx_filename):
         subprocess.Popen(["start", "winword", docx_filename], shell=True)
     except Exception as e:
         messagebox.showerror("Error", "Failed to open the Word document:\n" + str(e))
-
-# Function to open a URL
-def open_url():
-    url = "https://cloudconvert.com/wav-to-mp3"  # Replace with the URL you want to open
-    webbrowser.open(url)        
+      
 
 # Initialize the Tkinter window
 root = Tk()
@@ -133,25 +138,20 @@ frame = Frame(root)
 frame.pack(side=BOTTOM, fill=BOTH, expand=True)
 
 # Load and display background image
-bg_image = Image.open("bg.png")
+bg_image = Image.open("C:\\Users\\vbs\\bg.png")
 bg_photo = ImageTk.PhotoImage(bg_image)
 canvas = Canvas(root, width=700, height=450)
 canvas.pack()
 canvas.create_image(-75, 0, anchor=NW, image=bg_photo)
 
 # Display left image and text
-left_image = Image.open("v-a.png")
+left_image = Image.open("C:\\Users\\vbs\\v-a.png")
 left_photo = ImageTk.PhotoImage(left_image)
 canvas.create_image(50, 200, anchor=NW, image=left_photo)
 canvas.create_text(347, 350, text="Now convert your videos to mp3 files and also mp3 files to text with ease", font=("Lucida Calligraphy", 12, "bold"), fill="black")
-canvas.create_text(560, 170, text="Convert your mp3 file to wav file using", font=("Lucida Calligraphy", 9), fill="black")
-canvas.create_text(555, 190, text="this link :", font=("Lucida Calligraphy", 9), fill="black")
-url_label = Label(canvas, text="Click", fg="blue", cursor="hand2")
-url_label.place(x=600, y=180)  # Adjust the position as needed
-url_label.bind("<Button-1>", lambda event: open_url())
 
 # Display right image and title
-r_image = Image.open("a-t.png")
+r_image = Image.open("C:\\Users\\vbs\\a-t.png")
 r_photo = ImageTk.PhotoImage(r_image)
 canvas.create_image(520, 210, anchor=NW, image=r_photo)
 title_label = Label(canvas, text="Aawaj", font=("Arial", 36, "bold"),bg="white",padx=5,pady=2 )
@@ -167,8 +167,8 @@ audio_frame = Frame(frame)
 audio_frame.pack(side=RIGHT, padx=5, pady=5)
 
 # Create progress bars
-progress_bar_audio = ttk.Progressbar(audio_frame, length=200, mode="determinate")
-progress_bar_audio.pack(side=TOP, padx=5, pady=5)
+progress_bar_audio_mp3 = ttk.Progressbar(audio_frame, length=200, mode="determinate")
+progress_bar_audio_mp3.pack(side=TOP, padx=5, pady=5)
 
 progress_bar = ttk.Progressbar(video_frame, length=200, mode="determinate")
 progress_bar.pack(side=TOP, padx=5, pady=5)
@@ -177,7 +177,7 @@ progress_bar.pack(side=TOP, padx=5, pady=5)
 convert_video_button = Button(video_frame, text="Convert Video to Audio", command=convert_video_to_audio)
 convert_video_button.pack(side=TOP, anchor="s")
 
-convert_audio_button = Button(audio_frame, text="Convert WAV to Text", command=convert_wav_to_text)
+convert_audio_button = Button(audio_frame, text="Convert MP3 to Text", command=convert_mp3_to_text)
 convert_audio_button.pack(side=TOP, anchor="s")
 
 # Label to display optional status message
