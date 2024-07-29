@@ -10,7 +10,6 @@ import moviepy.editor
 import shutil
 import os
 import threading 
-import time
 import tempfile  
 from tempfile import NamedTemporaryFile
 from PIL import Image, ImageTk
@@ -50,7 +49,10 @@ def save_mp3_locally(mp3_path):
     if save_path:
         shutil.copy(mp3_path, save_path)
         messagebox.showinfo("Save Complete", "MP3 file saved as " + save_path)
-
+        try:
+            os.remove(mp3_path)  # Attempt to remove the temporary file
+        except Exception as e:
+            messagebox.showerror("Error", "Failed to delete temporary MP3 file:\n" + str(e))
 # Function to play MP3 with media player
 def play_mp3_with_media_player(mp3_path):
     try:
@@ -112,7 +114,10 @@ def save_docx_locally(docx_path):
     if save_path:
         shutil.copy(docx_path, save_path)
         messagebox.showinfo("Save Complete", "Word document saved as " + save_path)
-
+        try:
+            os.remove(docx_path)
+        except Exception as e:
+             messagebox.showerror("Error", "Failed to delete temporary docx file:\n" + str(e))    
 # Function to save recognized text as Word document
 def save_text_as_word_document(text, docx_filename):
     doc = Document()
